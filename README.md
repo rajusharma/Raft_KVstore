@@ -36,20 +36,44 @@ In our case statemachine is a KVstore implemented using Map.
 ### How to run
 raft_kvstore.go has function New_raft(id,majority,peers file,raft conf file) which takes input the id number of server, majority value, peers file name for initializing the cluster, and raft conf file name
 
-- type Raft interface 
-    - Id() int -returns the Id of node
+
+- type Raft interface
+	- Id() int -returns the id of node
     - Term()     int  -returns the term id
     - isLeader() bool
     - Quit() 
     - Start()
-    - Reset() //for reseting the server to follower
+    - Reset()	//resets the server node to follower
+    
+	- Leader()    int
 
+	- // Mailbox for state machine layer above to send commands of any
+	- // kind, and to have them replicated by raft.  If the server is not
+	- // the leader, the message will be silently dropped.
+	- Outbox() chan *LogEntry
 
-Now after making raft nodes we can close and again start the server using Quit() and Start() functions.
-Reset the node to follower by Reset() function 
-By giving delay between start and close we can see who is leader after each close and start using isLeader() fucntion.
+	- //Mailbox for state machine layer above to receive commands. These
+	- //are guaranteed to have been replicated on a majority
+	- Inbox() chan *LogEntry
+	
+	- Givemap() map[int]string // gives the content of map KVStore
+	
+	- GiveLog() []LogEntry	//gives the content of the log 
 
-raft_test.go is a sample test file which is documented.
+	- //Remove items from 0 .. index (inclusive), and reclaim disk
+	- //space. This is a hint, and there's no guarantee of immediacy since
+	- //there may be some servers that are lagging behind).
+
+	- //DiscardUpto(index int64)
+
+Now after making raft nodes we can put queries in input and output channel of the raft node.
+- query:=LogEntry{Index:1,Data:"insert|hello"}
+- raft_arr[index].Outbox()<-&query
+
+And then we can check the results by
+- <- raft_arr[index].Inbox(): 
+
+raft_kvstore_test.go is a sample test file which is documented.
 
 The code is documented for more details.
 
